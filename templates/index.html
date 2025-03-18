@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Sorter Logs</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+        }
+        .log-container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+    </style>
+    <script>
+        function fetchLogs() {
+            fetch('/logs')
+                .then(response => response.json())
+                .then(data => {
+                    const logList = document.getElementById("log-list");
+                    logList.innerHTML = "";
+                    data.forEach(log => {
+                        const li = document.createElement("li");
+                        li.textContent = log;
+                        logList.appendChild(li);
+                    });
+                });
+        }
+        setInterval(fetchLogs, 2000);
+        window.onload = fetchLogs;
+    </script>
+</head>
+<body>
+    <h1>File Sorter Logs</h1>
+    <div class="log-container">
+        <ul id="log-list"></ul>
+    </div>
+</body>
+</html>
