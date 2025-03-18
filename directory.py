@@ -8,7 +8,7 @@ from watchdog.events import FileSystemEventHandler
 from flask import Flask, render_template, jsonify
 
 # Replace with your Gemini API key
-GEMINI_API_KEY = ""
+GEMINI_API_KEY = "give your api key"
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 # Paths

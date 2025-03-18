@@ -3,35 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Sorter Logs</title>
+    <title>File Sorter Monitor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
-            padding: 20px;
+            margin: 0;
+            padding: 0;
             background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
         }
-        h1 {
-            text-align: center;
-        }
-        .log-container {
-            max-width: 600px;
-            margin: auto;
+        .container {
             background: white;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 800px;
         }
-        ul {
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .stages {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .stage {
+            text-align: center;
+            flex: 1;
+            padding: 10px;
+        }
+        .stage i {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .stage .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .stage .tick {
+            color: #2ecc71;
+            display: none;
+        }
+        .logs {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .logs ul {
             list-style-type: none;
             padding: 0;
         }
-        li {
+        .logs li {
             padding: 8px;
             border-bottom: 1px solid #ddd;
+            color: #555;
+        }
+        .logs li:last-child {
+            border-bottom: none;
         }
     </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI file structure automater log</h1>
+        <div class="stages">
+            <div class="stage" id="detecting-stage">
+                <i class="fas fa-search"></i>
+                <div class="loader"></div>
+                <div class="tick"><i class="fas fa-check"></i></div>
+                <p>Detecting</p>
+            </div>
+            <div class="stage" id="processing-stage">
+                <i class="fas fa-cogs"></i>
+                <div class="loader"></div>
+                <div class="tick"><i class="fas fa-check"></i></div>
+                <p>Processing</p>
+            </div>
+            <div class="stage" id="moving-stage">
+                <i class="fas fa-file-export"></i>
+                <div class="loader"></div>
+                <div class="tick"><i class="fas fa-check"></i></div>
+                <p>Moving</p>
+            </div>
+        </div>
+        <div class="logs">
+            <ul id="log-list"></ul>
+        </div>
+    </div>
     <script>
+        let totalFiles = 0;
+        let movedFiles = 0;
+
         function fetchLogs() {
             fetch('/logs')
                 .then(response => response.json())
@@ -39,20 +118,71 @@
                     const logList = document.getElementById("log-list");
                     logList.innerHTML = "";
                     data.forEach(log => {
-                        const li = document.createElement("li");
-                        li.textContent = log;
-                        logList.appendChild(li);
+                        // Ignore the "Server running" log
+                        if (!log.includes("Server running on http://localhost:5000")) {
+                            const li = document.createElement("li");
+                            li.textContent = log;
+                            logList.appendChild(li);
+
+                            // Update stages based on logs
+                            if (log.includes("New file detected")) {
+                                totalFiles++;
+                                updateStages("detecting");
+                            } else if (log.includes("Moved")) {
+                                movedFiles++;
+                                updateStages("moving");
+                            } else if (log.includes("Error")) {
+                                updateStages("error");
+                            }
+                        }
                     });
+
+                    // If all files are processed, show ticks in both processing and moving stages
+                    if (movedFiles === totalFiles && totalFiles > 0) {
+                        const processingStage = document.getElementById("processing-stage");
+                        const movingStage = document.getElementById("moving-stage");
+
+                        processingStage.querySelector(".loader").style.display = "none";
+                        processingStage.querySelector(".tick").style.display = "inline-block";
+
+                        movingStage.querySelector(".loader").style.display = "none";
+                        movingStage.querySelector(".tick").style.display = "inline-block";
+                    }
                 });
         }
+
+        function updateStages(stage) {
+            const detectingStage = document.getElementById("detecting-stage");
+            const processingStage = document.getElementById("processing-stage");
+            const movingStage = document.getElementById("moving-stage");
+
+            switch (stage) {
+                case "detecting":
+                    detectingStage.querySelector(".loader").style.display = "none";
+                    detectingStage.querySelector(".tick").style.display = "inline-block";
+                    processingStage.querySelector(".loader").style.display = "inline-block";
+                    processingStage.querySelector(".tick").style.display = "none";
+                    break;
+                case "moving":
+                    processingStage.querySelector(".loader").style.display = "none";
+                    processingStage.querySelector(".tick").style.display = "inline-block";
+                    movingStage.querySelector(".loader").style.display = "none";
+                    movingStage.querySelector(".tick").style.display = "inline-block";
+                    break;
+                case "error":
+                    // Reset stages on error
+                    detectingStage.querySelector(".loader").style.display = "inline-block";
+                    detectingStage.querySelector(".tick").style.display = "none";
+                    processingStage.querySelector(".loader").style.display = "none";
+                    processingStage.querySelector(".tick").style.display = "none";
+                    movingStage.querySelector(".loader").style.display = "none";
+                    movingStage.querySelector(".tick").style.display = "none";
+                    break;
+            }
+        }
+
         setInterval(fetchLogs, 2000);
         window.onload = fetchLogs;
     </script>
-</head>
-<body>
-    <h1>File Sorter Logs</h1>
-    <div class="log-container">
-        <ul id="log-list"></ul>
-    </div>
 </body>
 </html>
