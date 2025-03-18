@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
@@ -11,7 +11,7 @@ const app = express();
 const PORT = 5000;
 
 const WATCH_DIRECTORY = "./incoming_files";
-const FOLDERS = { "important": "./important", "entertainment": "./entertainment", "research": "./research" };
+const BASE_FOLDER = "./organized_files"; // Base folder for dynamically created folders
 
 let log_data = [];
 const processingFiles = new Set(); // Track files being processed
@@ -27,14 +27,13 @@ async function askGemini(filename) {
         setTimeout(async () => {
             try {
                 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-                const prompt = `Classify the file named '${filename}' into 'important', 'entertainment', or 'research'. Return only one of these words as output.`;
+                const prompt = `Suggest a single folder name to organize the file named '${filename}'. Return only the folder name as output.`;
                 const result = await model.generateContent(prompt);
                 const folder = result.response.text().toLowerCase().trim();
-                if (FOLDERS[folder]) resolve(folder);
-                else resolve("important");
+                resolve(folder);
             } catch (error) {
                 logMessage(`Error querying Gemini: ${error}`);
-                resolve("important");
+                resolve("uncategorized"); // Default folder if Gemini fails
             }
         }, 1000); // 1-second delay between API calls
     });
@@ -55,7 +54,7 @@ function moveFile(filePath) {
     }
 
     askGemini(filename).then(folder => {
-        const destFolder = FOLDERS[folder] || "./important";
+        const destFolder = path.join(BASE_FOLDER, folder); // Create folder path
         const destPath = path.join(destFolder, filename);
 
         fs.mkdirSync(destFolder, { recursive: true }); // Ensure destination folder exists
@@ -107,7 +106,7 @@ function startMonitoring() {
 }
 
 app.listen(PORT, () => {
-    Object.values(FOLDERS).forEach(folder => fs.mkdirSync(folder, { recursive: true })); // Create destination folders
+    fs.mkdirSync(BASE_FOLDER, { recursive: true }); // Create base folder
     fs.mkdirSync(WATCH_DIRECTORY, { recursive: true }); // Create watch directory
 
     logMessage(`Server running on http://localhost:${PORT}`);
